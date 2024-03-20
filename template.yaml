@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  SMModelCron: Schedule to start or stop SageMaker endpoint
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 30
+
+Parameters:
+  ModelName:
+    Type: String
+    Description: Model Name
+    Default: pytorch-inference-llm-v1
+  S3CodeArtifact:
+    Type: String
+    Description: S3 code artifact
+  ExecutionRoleArn:
+    Type: String
+    Description: SageMaker execution role ARN
+
+Resources:
+  ModelCronFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: model_cron
+      Handler: app.lambda_handler
+      Runtime: python3.11
+      Architectures:
+        - x86_64
+      Policies:
+        - Statement:
+            - Sid: SageMakerPolicy
+              Effect: Allow
+              Action:
+                - sagemaker:CreateEndpoint
+                - sagemaker:CreateEndpointConfig
+                - sagemaker:CreateModel
+                - sagemaker:DeleteEndpoint
+                - sagemaker:DeleteEndpointConfig
+                - sagemaker:DeleteModel
+              Resource:
+                - !Sub arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint/*
+                - !Sub arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint-config/*
+                - !Sub arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:model/*
+        - Statement:
+            - Sid: PassRole
+              Effect: Allow
+              Action:
+                - iam:PassRole
+              Resource: !Ref ExecutionRoleArn
+      Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
+        Variables:
+          MODEL_NAME: !Ref ModelName
+          S3_CODE_ARTIFACT: !Ref S3CodeArtifact
+          EXECUTION_ROLE_ARN: !Ref ExecutionRoleArn
+      Events:
+        ModelCronStart:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 14 * * ? *)
+            Name: SMModelCronStart
+            Description: Schedule to start SageMaker endpoint
+            Enabled: True
+            Input:
+              '{
+                "action": "start"
+              }'
+        ModelCronStop:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 0 * * ? *)
+            Name: SMModelCronStop
+            Description: Schedule to stop SageMaker endpoint
+            Enabled: True
+            Input:
+              '{
+                "action": "stop"
+              }'
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  ModelCronFunction:
+    Description: "Hello World Lambda Function ARN"
+    Value: !GetAtt ModelCronFunction.Arn
+  ModelCronFunctionIamRole:
+    Description: "Implicit IAM Role created for Hello World function"
+    Value: !GetAtt ModelCronFunctionRole.Arn
