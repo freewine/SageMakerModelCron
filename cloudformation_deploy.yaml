@@ -1,0 +1,90 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'SMModelCron: Schedule to start or stop SageMaker endpoint
+
+  '
+Globals:
+  Function:
+    Timeout: 30
+Parameters:
+  ModelName:
+    Type: String
+    Description: Model Name
+    Default: pytorch-inference-llm-v1
+  S3CodeArtifact:
+    Type: String
+    Description: S3 code artifact
+  ExecutionRoleArn:
+    Type: String
+    Description: SageMaker execution role ARN
+Resources:
+  ModelCronFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: s3://aws-sam-cli-managed-default-samclisourcebucket-ehgrbvebu77n/SMModelCron/7f234c4cf73e6414e40f3430b439e78f
+      Handler: app.lambda_handler
+      Runtime: python3.11
+      Architectures:
+      - x86_64
+      Policies:
+      - Statement:
+        - Sid: SageMakerPolicy
+          Effect: Allow
+          Action:
+          - sagemaker:CreateEndpoint
+          - sagemaker:CreateEndpointConfig
+          - sagemaker:CreateModel
+          - sagemaker:DeleteEndpoint
+          - sagemaker:DeleteEndpointConfig
+          - sagemaker:DeleteModel
+          Resource:
+          - Fn::Sub: arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint/*
+          - Fn::Sub: arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:endpoint-config/*
+          - Fn::Sub: arn:${AWS::Partition}:sagemaker:${AWS::Region}:${AWS::AccountId}:model/*
+      - Statement:
+        - Sid: PassRole
+          Effect: Allow
+          Action:
+          - iam:PassRole
+          Resource:
+            Ref: ExecutionRoleArn
+      Environment:
+        Variables:
+          MODEL_NAME:
+            Ref: ModelName
+          S3_CODE_ARTIFACT:
+            Ref: S3CodeArtifact
+          EXECUTION_ROLE_ARN:
+            Ref: ExecutionRoleArn
+      Events:
+        ModelCronStart:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 0 * * ? *)
+            Name: SMModelCronStart
+            Description: Schedule to start SageMaker endpoint
+            Enabled: true
+            Input: '{ "action": "start" }'
+        ModelCronStop:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 14 * * ? *)
+            Name: SMModelCronStop
+            Description: Schedule to stop SageMaker endpoint
+            Enabled: true
+            Input: '{ "action": "stop" }'
+    Metadata:
+      SamResourceId: ModelCronFunction
+Outputs:
+  ModelCronFunction:
+    Description: Lambda Function ARN
+    Value:
+      Fn::GetAtt:
+      - ModelCronFunction
+      - Arn
+  ModelCronFunctionIamRole:
+    Description: Implicit IAM Role created for function
+    Value:
+      Fn::GetAtt:
+      - ModelCronFunctionRole
+      - Arn

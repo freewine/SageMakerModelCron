@@ -76,13 +76,28 @@ SMModelCron$ sam local invoke ModelCronFunction --event events/event.json
 
 ```yaml
       Events:
-        ModelCron:
+        ModelCronStart:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 0 * * ? *)
+            Name: SMModelCronStart
+            Description: Schedule to start SageMaker endpoint
+            Enabled: True
+            Input:
+              '{
+                "action": "start"
+              }'
+        ModelCronStop:
           Type: Schedule
           Properties:
             Schedule: cron(0 14 * * ? *)
-            Name: SMModelCron
-            Description: Schedule to start or stop SageMaker endpoint
+            Name: SMModelCronStop
+            Description: Schedule to stop SageMaker endpoint
             Enabled: True
+            Input:
+              '{
+                "action": "stop"
+              }'
 ```
 
 ## Add a resource to your application

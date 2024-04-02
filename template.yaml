@@ -59,7 +59,7 @@ Resources:
         ModelCronStart:
           Type: Schedule
           Properties:
-            Schedule: cron(0 14 * * ? *)
+            Schedule: cron(0 0 * * ? *)
             Name: SMModelCronStart
             Description: Schedule to start SageMaker endpoint
             Enabled: True
@@ -70,7 +70,7 @@ Resources:
         ModelCronStop:
           Type: Schedule
           Properties:
-            Schedule: cron(0 0 * * ? *)
+            Schedule: cron(0 14 * * ? *)
             Name: SMModelCronStop
             Description: Schedule to stop SageMaker endpoint
             Enabled: True
@@ -84,8 +84,8 @@ Outputs:
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
   ModelCronFunction:
-    Description: "Hello World Lambda Function ARN"
+    Description: "Lambda Function ARN"
     Value: !GetAtt ModelCronFunction.Arn
   ModelCronFunctionIamRole:
-    Description: "Implicit IAM Role created for Hello World function"
+    Description: "Implicit IAM Role created for function"
     Value: !GetAtt ModelCronFunctionRole.Arn
